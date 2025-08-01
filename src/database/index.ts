@@ -3,7 +3,8 @@ import { PrismaClient } from './generated/prisma';
 import Logger from '@/utils/Logger';
 
 const prisma = new PrismaClient({
-  log: config.node_env === 'development' ? ['query', 'error', 'warn'] : ['error'],
+  log:
+    config.node_env === 'development' ? ['query', 'error', 'warn'] : ['error'],
 });
 
 // Função para conectar ao banco
