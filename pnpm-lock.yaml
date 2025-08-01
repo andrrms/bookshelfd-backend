@@ -19,6 +19,9 @@ importers:
       picocolors:
         specifier: ^1.1.1
         version: 1.1.1
+      zod:
+        specifier: ^4.0.14
+        version: 4.0.14
     devDependencies:
       '@types/express':
         specifier: ^5.0.3
@@ -1105,6 +1108,12 @@ packages:
       }
     engines: { node: '>=6' }
 
+  zod@4.0.14:
+    resolution:
+      {
+        integrity: sha512-nGFJTnJN6cM2v9kXL+SOBq3AtjQby3Mv5ySGFof5UGRHrRioSJ5iG680cYNjE/yWk671nROcpPj4hAS8nyLhSw==,
+      }
+
 snapshots:
   '@cspotcode/source-map-support@0.8.1':
     dependencies:
@@ -1709,3 +1718,5 @@ snapshots:
   yaml@2.8.0: {}
 
   yn@3.1.1: {}
+
+  zod@4.0.14: {}
