@@ -1,39 +1,87 @@
-import jwt from 'jsonwebtoken';
-import config from '../config';
+// src/services/auth.service.ts
 
-interface userPayload {
-  id: number;
-}
+import prisma from '@/database';
+import { NotFoundError, UnauthorizedError } from '@/errors/custom-errors';
+import { loginSchema } from '@/schemas/auth.schemas'; // Precisamos de um schema separado para auth
+import bcrypt from 'bcrypt';
+import { z } from 'zod';
+import { JwtService } from './jwt.service';
 
-export class AuthService {
-  private readonly ACCESS_TOKEN_SECRET = config.access_token_secret;
-  private readonly REFRESH_TOKEN_SECRET = config.refresh_token_secret;
+type LoginInput = z.infer<typeof loginSchema>;
+type RefreshTokenInput = string;
 
-  public generateAccessToken(userPayload: userPayload): string {
-    return jwt.sign(userPayload, this.ACCESS_TOKEN_SECRET, {
-      expiresIn: '15m',
+const jwtService = new JwtService();
+
+class AuthService {
+  async authenticateUser(data: LoginInput) {
+    const user = await prisma.user.findUnique({
+      where: { email: data.email },
     });
-  }
 
-  public generateRefreshToken(userPayload: userPayload): string {
-    return jwt.sign(userPayload, this.REFRESH_TOKEN_SECRET, {
-      expiresIn: '7d',
-    });
-  }
-
-  public verifyToken(token: string, secret: string): userPayload | null {
-    try {
-      return jwt.verify(token, secret) as userPayload;
-    } catch (error) {
-      return null;
+    if (!user) {
+      throw new UnauthorizedError('E-mail ou senha incorretos.');
     }
+
+    const isPasswordValid = await bcrypt.compare(data.password, user.password);
+
+    if (!isPasswordValid) {
+      throw new UnauthorizedError('E-mail ou senha incorretos.');
+    }
+
+    const userPayload = { id: user.id };
+    const accessToken = jwtService.generateAccessToken(userPayload);
+    const refreshToken = jwtService.generateRefreshToken(userPayload);
+
+    await prisma.refreshToken.create({
+      data: {
+        token: refreshToken,
+        userId: user.id,
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      },
+    });
+
+    return { accessToken, refreshToken };
   }
 
-  public verifyAccessToken(token: string): userPayload | null {
-    return this.verifyToken(token, this.ACCESS_TOKEN_SECRET);
-  }
+  async refreshTokens(token: RefreshTokenInput) {
+    const decodedToken = jwtService.verifyRefreshToken(token);
 
-  public verifyRefreshToken(token: string): userPayload | null {
-    return this.verifyToken(token, this.REFRESH_TOKEN_SECRET);
+    if (!decodedToken) {
+      throw new UnauthorizedError('Refresh token inválido ou expirado.');
+    }
+
+    const storedToken = await prisma.refreshToken.findUnique({
+      where: { token },
+    });
+
+    if (!storedToken || storedToken.expiresAt < new Date()) {
+      throw new UnauthorizedError('Refresh token não encontrado ou expirado.');
+    }
+
+    await prisma.refreshToken.delete({ where: { token } });
+
+    const user = await prisma.user.findUnique({
+      where: { id: decodedToken.id },
+    });
+
+    if (!user) {
+      throw new NotFoundError('Usuário não encontrado.');
+    }
+
+    const userPayload = { id: user.id };
+    const newAccessToken = jwtService.generateAccessToken(userPayload);
+    const newRefreshToken = jwtService.generateRefreshToken(userPayload);
+
+    await prisma.refreshToken.create({
+      data: {
+        token: newRefreshToken,
+        userId: user.id,
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      },
+    });
+
+    return { accessToken: newAccessToken, refreshToken: newRefreshToken };
   }
 }
+
+export default new AuthService();

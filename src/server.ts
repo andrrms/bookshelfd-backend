@@ -1,9 +1,9 @@
-import express from 'express';
-import { connectDatabase, disconnectDatabase } from '@/database';
 import config from '@/config';
+import { connectDatabase, disconnectDatabase } from '@/database';
 import Logger from '@/utils/Logger';
-import authRouter from './routes/auth.route';
-import userRouter from './routes/user.route';
+import express from 'express';
+import authRouter from './routes/auth.routes';
+import userRouter from './routes/user.routes';
 
 const app = express();
 
