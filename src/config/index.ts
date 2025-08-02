@@ -1,5 +1,5 @@
-import env from "./env";
+import env from './env';
 
 export default {
-	...env,
+  ...env,
 };

@@ -7,16 +7,19 @@ A integração do Prisma foi configurada para garantir conexões seguras e um en
 ## Funcionalidades Implementadas
 
 ### 1. Conexão Automática
+
 - O banco de dados é conectado automaticamente na inicialização do servidor
 - Logs informativos indicam o status da conexão
 - Em caso de erro na conexão, o processo é encerrado com código de erro
 
 ### 2. Configuração de Logs
+
 - Em desenvolvimento: logs de query, error e warn
 - Em produção: apenas logs de error
 - Configuração baseada na variável de ambiente `NODE_ENV`
 
 ### 3. Graceful Shutdown
+
 - O servidor escuta sinais `SIGTERM` e `SIGINT` (Ctrl+C)
 - Encerramento ordenado:
   1. Para de aceitar novas conexões HTTP
@@ -27,15 +30,18 @@ A integração do Prisma foi configurada para garantir conexões seguras e um en
 ## Como Usar
 
 ### Iniciar o Servidor
+
 ```bash
 npm run dev
 ```
 
 ### Parar o Servidor
+
 - **Desenvolvimento**: `Ctrl+C` no terminal
 - **Produção**: Enviar sinal SIGTERM para o processo
 
 ### Exemplo de Logs
+
 ```
 ✅ Conectado ao banco de dados com sucesso
 🚀 Servidor rodando em http://localhost:3000
@@ -50,11 +56,13 @@ npm run dev
 ## Estrutura dos Arquivos
 
 ### `/src/database/index.ts`
+
 - Configuração do cliente Prisma
 - Funções de conexão e desconexão
 - Export do cliente para uso em outros módulos
 
 ### `/src/server.ts`
+
 - Configuração do servidor Express
 - Integração com o banco de dados
 - Implementação do graceful shutdown
