@@ -1,11 +1,13 @@
 import express from 'express';
 import { connectDatabase, disconnectDatabase } from '@/database';
 import config from '@/config';
-import Logger from './utils/Logger';
+import Logger from '@/utils/Logger';
+import authRouter from './routes/auth.route';
 
 const app = express();
 
 app.use(express.json());
+app.use(authRouter);
 
 const startServer = async () => {
   try {
