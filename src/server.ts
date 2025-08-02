@@ -3,11 +3,13 @@ import { connectDatabase, disconnectDatabase } from '@/database';
 import config from '@/config';
 import Logger from '@/utils/Logger';
 import authRouter from './routes/auth.route';
+import userRouter from './routes/user.route';
 
 const app = express();
 
 app.use(express.json());
 app.use(authRouter);
+app.use(userRouter);
 
 const startServer = async () => {
   try {
