@@ -1,5 +1,5 @@
 import { ConflictError } from '@/errors/custom-errors';
-import { createUserSchema, updateUserSchema } from '@/schemas/user.schema';
+import { createUserSchema, updateUserSchema } from '@/schemas/user.schemas';
 import userService from '@/services/user.service';
 import { Request, Response } from 'express';
 import { z } from 'zod';

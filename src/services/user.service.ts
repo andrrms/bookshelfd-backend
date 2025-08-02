@@ -5,7 +5,7 @@ import {
   createUserSchema,
   updateUserSchema,
   userResponseSchema,
-} from '@/schemas/user.schema';
+} from '@/schemas/user.schemas';
 import bcrypt from 'bcrypt';
 import { z } from 'zod';
 
