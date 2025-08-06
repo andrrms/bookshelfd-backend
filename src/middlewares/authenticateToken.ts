@@ -2,7 +2,7 @@ import config from '@/config';
 import prisma, { User } from '@/database';
 import { NotFoundError, UnauthorizedError } from '@/errors/custom-errors';
 import { UserTokenPayload } from '@/schemas/user.schemas';
-import userService from '@/services/user.service';
+import userService from '@/services/users.service';
 
 import { NextFunction, Request, Response } from 'express';
 import jwt from 'jsonwebtoken';

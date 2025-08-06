@@ -38,7 +38,19 @@ class UserService {
 
   async getUserById(id: number) {
     const user = await prisma.user.findUnique({
-      where: { id },
+      where: { id, deletedAt: null },
+    });
+
+    if (!user) {
+      throw new NotFoundError('Usuário não encontrado.');
+    }
+
+    return userResponseSchema.parse(user);
+  }
+
+  async getUserByUuid(uuid: string) {
+    const user = await prisma.user.findUnique({
+      where: { uuid, deletedAt: null },
     });
 
     if (!user) {
