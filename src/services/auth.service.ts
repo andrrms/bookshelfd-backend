@@ -1,8 +1,7 @@
-// src/services/auth.service.ts
-
 import prisma from '@/database';
 import { NotFoundError, UnauthorizedError } from '@/errors/custom-errors';
 import { loginSchema } from '@/schemas/auth.schemas'; // Precisamos de um schema separado para auth
+import { userTokenPayloadSchema } from '@/schemas/user.schemas';
 import bcrypt from 'bcrypt';
 import { z } from 'zod';
 import { JwtService } from './jwt.service';
@@ -15,7 +14,7 @@ const jwtService = new JwtService();
 class AuthService {
   async authenticateUser(data: LoginInput) {
     const user = await prisma.user.findUnique({
-      where: { email: data.email },
+      where: { email: data.email, deletedAt: null },
     });
 
     if (!user) {
@@ -28,7 +27,8 @@ class AuthService {
       throw new UnauthorizedError('E-mail ou senha incorretos.');
     }
 
-    const userPayload = { id: user.id };
+    const userPayload = userTokenPayloadSchema.parse(user);
+
     const accessToken = jwtService.generateAccessToken(userPayload);
     const refreshToken = jwtService.generateRefreshToken(userPayload);
 
@@ -61,14 +61,15 @@ class AuthService {
     await prisma.refreshToken.delete({ where: { token } });
 
     const user = await prisma.user.findUnique({
-      where: { id: decodedToken.id },
+      where: { uuid: decodedToken.uuid },
     });
 
     if (!user) {
       throw new NotFoundError('Usuário não encontrado.');
     }
 
-    const userPayload = { id: user.id };
+    const userPayload = userTokenPayloadSchema.parse(user);
+
     const newAccessToken = jwtService.generateAccessToken(userPayload);
     const newRefreshToken = jwtService.generateRefreshToken(userPayload);
 
