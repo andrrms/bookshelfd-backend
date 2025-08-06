@@ -1,8 +1,12 @@
 import config from '@/config';
-import prisma from '@/database';
-import { DecodedJwtToken } from '@/types/auth';
+import prisma, { User } from '@/database';
+import { NotFoundError, UnauthorizedError } from '@/errors/custom-errors';
+import { UserTokenPayload } from '@/schemas/user.schemas';
+import userService from '@/services/user.service';
+
 import { NextFunction, Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
+import z from 'zod';
 
 export default function authenticateToken(
   req: Request,
@@ -17,15 +21,8 @@ export default function authenticateToken(
   jwt.verify(token, config.access_token_secret, async (err, jwtToken) => {
     if (err || !jwtToken) return res.sendStatus(403);
 
-    const decoded = jwtToken as DecodedJwtToken;
-
-    const user = await prisma.user.findUnique({
-      where: {
-        id: decoded.id,
-      },
-    });
-
-    if (!user) return res.sendStatus(403);
+    const decoded = jwtToken as UserTokenPayload;
+    const user = await userService.getUserByUuid(decoded.uuid);
 
     req.user = user;
 

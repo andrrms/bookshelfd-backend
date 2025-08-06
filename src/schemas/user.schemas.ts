@@ -2,6 +2,7 @@ import { z } from 'zod';
 
 export const userCoreSchema = z.object({
   id: z.number().int(),
+  uuid: z.uuid(),
   username: z.string(),
   email: z.string(),
   password: z
@@ -53,3 +54,12 @@ export const userResponseSchema = userCoreSchema
     createdAt: true,
     updatedAt: true,
   });
+
+export const userTokenPayloadSchema = z.object({
+  uuid: z.uuid(),
+  username: z.string(),
+  email: z.string(),
+});
+
+export type UserTokenPayload = z.infer<typeof userTokenPayloadSchema>;
+export type UserResponse = z.infer<typeof userResponseSchema>;
