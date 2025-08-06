@@ -13,6 +13,7 @@ datasource db {
 
 model User {
   id Int @id @default(autoincrement())
+  uuid String @unique @default(uuid())
   username String @unique
   email String @unique
   password String
@@ -46,7 +47,7 @@ enum BookStatus {
 }
 
 model Book {
-  id Int @id @default(autoincrement())
+  id String @id @default(uuid())
   title String
   author String
   isbn String? @unique
@@ -63,7 +64,7 @@ model Book {
 }
 
 model BookValidation {
-  bookId Int
+  bookId String
   validatorId Int
   isValid Boolean
   reason String?
