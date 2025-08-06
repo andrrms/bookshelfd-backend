@@ -50,7 +50,7 @@ async function main() {
     await prisma.book.create({
       data: {
         ...bookData,
-        contributorId: adminUser.id,
+        contributorUuid: adminUser.uuid,
       },
     });
   }

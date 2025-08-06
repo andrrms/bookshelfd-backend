@@ -54,8 +54,8 @@ model Book {
   description String?
   status BookStatus @default(DRAFT)
 
-  contributorId Int
-  contributor User @relation(fields: [contributorId], references: [id])
+  contributorUuid String
+  contributor User @relation(fields: [contributorUuid], references: [uuid])
   validations BookValidation[]
 
   createdAt DateTime @default(now())
@@ -65,15 +65,15 @@ model Book {
 
 model BookValidation {
   bookId String
-  validatorId Int
+  validatorUuid String
   isValid Boolean
   reason String?
 
   book Book @relation(fields: [bookId], references: [id])
-  validator User @relation(fields: [validatorId], references: [id])
+  validator User @relation(fields: [validatorUuid], references: [uuid])
 
   createdAt DateTime @default(now())
   deletedAt DateTime?
 
-  @@id([bookId, validatorId])
+  @@id([bookId, validatorUuid])
 }
