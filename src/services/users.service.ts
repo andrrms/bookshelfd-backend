@@ -70,6 +70,7 @@ class UserService {
         where: { id },
         data: userData,
       });
+
       return userResponseSchema.parse(user);
     } catch (e) {
       if (e instanceof Prisma.PrismaClientKnownRequestError) {
