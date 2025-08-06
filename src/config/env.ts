@@ -8,5 +8,6 @@ export default {
   port: process.env.PORT || '3001',
   database_url: process.env.DATABASE_URL || 'file:./dev.db',
   node_env: process.env.NODE_ENV || 'development',
-  access_token_secret: process.env.ACCESS_TOKEN_SECRET || '123',
+  access_token_secret: process.env.ACCESS_TOKEN_SECRET || 'im_insecure',
+  refresh_token_secret: process.env.REFRESH_TOKEN_SECRET || 'im_insecure',
 };
