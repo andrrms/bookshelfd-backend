@@ -1,10 +1,10 @@
 import { PrismaErrors } from '@/constants/prisma-errors';
-import prisma, { Book, BookStatus, Prisma } from '@/database';
+import prisma, { ContentStatus, Prisma } from '@/database';
 import { ConflictError, NotFoundError } from '@/errors/custom-errors';
 import {
-  BookCreateInput,
-  bookResponseSchema,
-  BookUpdateInput,
+  CreateBookInput,
+  bookSchema,
+  UpdateBookInput,
 } from '@/schemas/book.schemas';
 
 export class BookService {
@@ -24,7 +24,7 @@ export class BookService {
     const skip = (page - 1) * limit;
 
     const where = {
-      status: BookStatus.VALIDATED,
+      status: ContentStatus.VALIDATED,
       OR: search
         ? [
             { title: { contains: search, mode: 'insensitive' as const } },
@@ -43,7 +43,7 @@ export class BookService {
     const totalCount = await prisma.book.count({ where });
 
     return {
-      books: books.map((book) => bookResponseSchema.parse(book)),
+      books: books.map((book) => bookSchema.parse(book)),
       totalCount,
       page,
       limit,
@@ -60,28 +60,28 @@ export class BookService {
     return book;
   }
 
-  async createBook(data: BookCreateInput) {
-    const existingBook = await prisma.book.findUnique({
-      where: { isbn: data.isbn },
+  async createBook(data: CreateBookInput) {
+    const existingBook = await prisma.book.findFirst({
+      where: {
+        OR: [{ isbn: data.isbn }, { isbn13: data.isbn13 }],
+      },
     });
 
-    if (existingBook) {
-      throw new ConflictError('E-mail já cadastrado.');
-    }
+    if (existingBook) throw new ConflictError('E-mail já cadastrado.');
 
     return prisma.book.create({
       data,
     });
   }
 
-  async updateBook(id: string, data: BookUpdateInput) {
+  async updateBook(id: string, data: UpdateBookInput) {
     try {
       const book = await prisma.book.update({
         where: { id },
         data,
       });
 
-      return bookResponseSchema.parse(book);
+      return bookSchema.parse(book);
     } catch (e) {
       if (e instanceof Prisma.PrismaClientKnownRequestError) {
         if (e.code === PrismaErrors.RecordNotFound) {
