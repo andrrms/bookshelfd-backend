@@ -67,18 +67,11 @@ export const userResponseSchema = z.object({
 });
 
 export const accessTokenPayloadSchema = z.object({
-  id: z.uuid(),
+  userId: z.uuid(),
   sessionId: z.uuid(),
   role: UserRole,
 });
 
-export const refreshTokenPayloadSchema = z.object({
-  jti: z.uuid(),
-  sub: z.uuid(),
-  type: z.string().default('refresh'),
-});
-
 export type UserSchema = z.infer<typeof userSchema>;
 export type AccessTokenPayload = z.infer<typeof accessTokenPayloadSchema>;
-export type RefreshTokenPayload = z.infer<typeof refreshTokenPayloadSchema>;
 export type UserResponse = z.infer<typeof userResponseSchema>;

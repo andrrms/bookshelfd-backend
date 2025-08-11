@@ -5,13 +5,13 @@ import { Request, Response } from 'express';
 class AuthController {
   async login(req: Request, res: Response) {
     const validatedData = loginSchema.parse(req.body);
-    const tokens = await authService.authenticateUser(validatedData);
+    const tokens = await authService.login(validatedData);
     return res.json(tokens);
   }
 
   async refreshToken(req: Request, res: Response) {
     const validatedData = tokenSchema.parse(req.body);
-    const newTokens = await authService.refreshTokens(validatedData.token);
+    const newTokens = await authService.refreshToken(validatedData.token);
     return res.json(newTokens);
   }
 }

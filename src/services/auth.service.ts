@@ -1,18 +1,42 @@
+import config from '@/config';
 import prisma from '@/database';
-import { NotFoundError, UnauthorizedError } from '@/errors/custom-errors';
+import { UnauthorizedError } from '@/errors/custom-errors';
 import { loginSchema } from '@/schemas/auth.schemas'; // Precisamos de um schema separado para auth
-import { userTokenPayloadSchema } from '@/schemas/user.schemas';
+import {
+  AccessTokenPayload,
+  accessTokenPayloadSchema,
+} from '@/schemas/user.schemas';
 import bcrypt from 'bcrypt';
+import jwt from 'jsonwebtoken';
+import { v4 as uuidv4 } from 'uuid';
 import { z } from 'zod';
-import { JwtService } from './jwt.service';
-
 type LoginInput = z.infer<typeof loginSchema>;
 type RefreshTokenInput = string;
 
-const jwtService = new JwtService();
-
 class AuthService {
-  async authenticateUser(data: LoginInput) {
+  private readonly ACCESS_TOKEN_SECRET: string;
+  private readonly REFRESH_TOKEN_SECRET: string;
+  private readonly ACCESS_TOKEN_EXPIRATION: string;
+  private readonly REFRESH_TOKEN_EXPIRATION: string;
+
+  constructor() {
+    this.ACCESS_TOKEN_SECRET = config.access_token_secret;
+    this.REFRESH_TOKEN_SECRET = config.refresh_token_secret;
+    this.ACCESS_TOKEN_EXPIRATION = config.jwt_access_expiration;
+    this.REFRESH_TOKEN_EXPIRATION = config.jwt_refresh_expiration;
+  }
+
+  public signAccessToken(accessTokenPayload: AccessTokenPayload): string {
+    return jwt.sign(accessTokenPayload, this.ACCESS_TOKEN_SECRET, {
+      expiresIn: '15m',
+    });
+  }
+
+  public decodeAccessToken(token: string) {
+    return jwt.verify(token, this.ACCESS_TOKEN_SECRET) as AccessTokenPayload;
+  }
+
+  async login(data: LoginInput, ipAddress?: string, userAgent?: string) {
     const user = await prisma.user.findUnique({
       where: { email: data.email, deletedAt: null },
     });
@@ -21,67 +45,121 @@ class AuthService {
       throw new UnauthorizedError('E-mail ou senha incorretos.');
     }
 
-    const isPasswordValid = await bcrypt.compare(data.password, user.password);
+    const isPasswordValid = await bcrypt.compare(
+      data.password,
+      user.passwordHash,
+    );
 
     if (!isPasswordValid) {
       throw new UnauthorizedError('E-mail ou senha incorretos.');
     }
 
-    const userPayload = userTokenPayloadSchema.parse(user);
+    const sessionId = uuidv4();
+    const jti = uuidv4();
 
-    const accessToken = jwtService.generateAccessToken(userPayload);
-    const refreshToken = jwtService.generateRefreshToken(userPayload);
+    const userPayload = accessTokenPayloadSchema.parse(user);
 
-    await prisma.refreshToken.create({
+    const accessToken = this.signAccessToken(userPayload);
+    const refreshToken = uuidv4();
+
+    await prisma.session.create({
       data: {
-        token: refreshToken,
+        id: sessionId,
         userId: user.id,
-        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+        token: accessToken,
+        refreshToken: refreshToken,
+        expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+        ipAddress: ipAddress,
+        userAgent: userAgent,
       },
+    });
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { lastLogin: new Date() },
     });
 
     return { accessToken, refreshToken };
   }
 
-  async refreshTokens(token: RefreshTokenInput) {
-    const decodedToken = jwtService.verifyRefreshToken(token);
-
-    if (!decodedToken) {
-      throw new UnauthorizedError('Refresh token inválido ou expirado.');
-    }
-
-    const storedToken = await prisma.refreshToken.findUnique({
-      where: { token },
+  async refreshToken(token: string) {
+    // Procura a sessão pelo refreshToken em vez de um modelo refreshToken separado
+    const session = await prisma.session.findUnique({
+      where: {
+        refreshToken: token,
+        isRevoked: false,
+        expiresAt: { gt: new Date() },
+      },
+      include: { user: true },
     });
 
-    if (!storedToken || storedToken.expiresAt < new Date()) {
-      throw new UnauthorizedError('Refresh token não encontrado ou expirado.');
+    if (!session) {
+      throw new UnauthorizedError('Sessão não encontrada ou expirada.');
     }
 
-    await prisma.refreshToken.delete({ where: { token } });
+    if (session.refreshToken !== token) {
+      await this.revokeAllUserSessions(
+        session.userId,
+        'Reutilização de refresh token detectada',
+      );
 
-    const user = await prisma.user.findUnique({
-      where: { uuid: decodedToken.uuid },
+      throw new UnauthorizedError(
+        'Alerta dAlerta de segurança: Possível roubo de token. Sessões revogadas.',
+      );
+    }
+
+    const newAccessToken = this.signAccessToken({
+      userId: session.user.id,
+      sessionId: session.id,
+      role: session.user.role,
     });
 
-    if (!user) {
-      throw new NotFoundError('Usuário não encontrado.');
-    }
+    const newRefreshToken = uuidv4();
 
-    const userPayload = userTokenPayloadSchema.parse(user);
-
-    const newAccessToken = jwtService.generateAccessToken(userPayload);
-    const newRefreshToken = jwtService.generateRefreshToken(userPayload);
-
-    await prisma.refreshToken.create({
+    await prisma.session.update({
+      where: { id: session.id },
       data: {
-        token: newRefreshToken,
-        userId: user.id,
-        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+        token: newAccessToken,
+        refreshToken: newRefreshToken,
+        lastRefreshedAt: new Date(),
+      },
+    });
+  }
+
+  async logout(sessionId: string, userId: string) {
+    const session = await prisma.session.findUnique({
+      where: { id: sessionId },
+    });
+
+    if (!session || session.userId !== userId) {
+      throw new UnauthorizedError(
+        'Sessão não encontrada ou não pertence ao usuário.',
+      );
+    }
+
+    if (session.isRevoked) {
+      return { message: 'Sessão já encerrada.' };
+    }
+
+    await prisma.session.update({
+      where: { id: sessionId },
+      data: {
+        isRevoked: true,
+        revokedReadon: 'Logout solicitado pelo usuário',
       },
     });
 
-    return { accessToken: newAccessToken, refreshToken: newRefreshToken };
+    return { message: 'Logout realizado com sucesso.' };
+  }
+
+  async revokeAllUserSessions(
+    userId: string,
+    reason: string = 'Usuário solicitou logout de todos os aparelhos',
+  ) {
+    await prisma.session.updateMany({
+      where: { userId, isRevoked: false },
+      data: { isRevoked: true, revokedReadon: reason },
+    });
   }
 }
 

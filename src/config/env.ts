@@ -10,4 +10,6 @@ export default {
   node_env: process.env.NODE_ENV || 'development',
   access_token_secret: process.env.ACCESS_TOKEN_SECRET || 'im_insecure',
   refresh_token_secret: process.env.REFRESH_TOKEN_SECRET || 'im_insecure',
+  jwt_access_expiration: process.env.JWT_ACCESS_EXPIRATION || '15m',
+  jwt_refresh_expiration: process.env.JWT_REFRESH_EXPITATION || '30m',
 };
