@@ -12,68 +12,396 @@ datasource db {
 }
 
 model User {
-  id Int @id @default(autoincrement())
-  uuid String @unique @default(uuid())
-  username String @unique
+  id String @unique @default(uuid())
+  
+  
   email String @unique
-  password String
+  username String @unique
+  firstName String?
+  lastName String?
+  bio String?
+  avatarUrl String?
+
+  passwordHash String
+  salt String
+  
+  role UserRole @default(USER)
   reputation Int @default(0)
+  emailVerified Boolean @default(false)
 
-  contributedBooks Book[]
-  validationsGiven BookValidation[]
+  verificationToken String?
+  resetPasswordToken String?
+  resetPasswordExpires DateTime?
 
-  refreshTokens RefreshToken[]
-
+  lastLogin DateTime?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   deletedAt DateTime?
+
+  // Relações
+  books Book[]
+  bookshelf BookshelfEntry[]
+  lists List[]
+  listFollows ListFollow[]
+  reviews Review[]
+  constibutions Contribution[]
+  validations Validation[]
+  notifications Notification[]
+  followedBy Follow[] @relation("Following")
+  following Follow[] @relation("Follower")
+  reputationEvents ReputationEvent[]
+  sessions Session[]
+
+  // Índices
+  @@index([email])
+  @@index([username])
+  @@index([reputation])
+
 }
 
-model RefreshToken{ 
-  id Int @id @default(autoincrement())
+model Session{
+  id String @id @default(uuid())
+  userId String
   token String @unique
-  userId Int
-  user User @relation(fields: [userId], references: [id])
+  refreshToken String @unique
   expiresAt DateTime
   createdAt DateTime @default(now())
+  ipAddress String?
+  userAgent String?
+  isRevoked Boolean @default(false)
+  lastRefreshedAt DateTime?
+  revokedReadon String?
+
+  // Relações
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Índices
+  @@index([token])
+  @@index([refreshToken])
+  @@index([userId])
+} 
+
+model ReputationEvent {
+  id String @id @default(uuid())
+  userId String
+  type ReputationEventType
+  points Int
+  sourceId String?
+  reason String
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
-enum BookStatus {
+model Follow {
+  id String @id @default(uuid())
+  followerId String
+  followingId String
+  createdAt DateTime @default(now())
+
+  // Relações
+  follower User @relation("Follower", fields: [followerId], references: [id], onDelete: Cascade)
+  following User @relation("Following", fields: [followingId], references: [id], onDelete: Cascade)
+  @@unique([followerId, followingId])
+
+  // Índices
+  @@index([followerId])
+  @@index([followingId])
+
+}
+
+model Notification {
+  id String @id @default(uuid())
+  userId String
+  type NotificationType
+  title String
+  message String
+  isRead Boolean @default(false)
+  relatedId String?
+  relatedType String?
+  createdAt DateTime @default(now())
+
+  // Relações
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Índices
+  @@index([userId])
+  @@index([isRead])
+  @@index([createdAt])
+}
+
+// Book System
+
+model Book {
+  id String @id @default(uuid())
+  title String
+  description String?
+  isbn String? @unique
+  isbn13 String? @unique
+  coverUrl String?
+  publishDate DateTime?
+  pageCount Int?
+  language String?
+  status ContentStatus @default(DRAFT)
+  author String
+  creatorId String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  deletedAt DateTime?
+  
+  // Relações
+  creator User @relation(fields: [creatorId], references: [id])
+  authors Author[] @relation("BookAuthors")
+  genres Genre[] @relation("BookGenres")
+  review Review[] 
+  bookshelfEntries BookshelfEntry[]
+  listEntries ListBook[]
+  coverFor List[] @relation("ListCoverBook")
+  contributions Contribution[]
+  validations Validation[]
+
+  // Índices
+  @@index([title])
+  @@index([isbn])
+  @@index([isbn13])
+  @@index([status])
+}
+
+model BookshelfEntry {
+  id String @id @default(uuid())
+  userId String
+  bookId String
+  status ReadStatus @default(WANT_TO_READ)
+  favorite Boolean @default(false)
+  private Boolean @default(false)
+
+  startedAt DateTime?
+  finishedAt DateTime?
+  notes String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relações
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  book Book @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  @@unique([userId, bookId])
+
+  // Índices
+  @@index([userId])
+  @@index([bookId])
+  @@index([status])
+}
+
+model List {
+  id String @id @default(uuid())
+  name String
+  description String?
+  isPublic Boolean @default(false)
+  isFeatured Boolean @default(false)
+  userId String
+  coverBookId String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relações
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  coverBook Book? @relation("ListCoverBook", fields: [coverBookId], references: [id])
+  books ListBook[]
+  followers ListFollow[]
+  
+  // Índices
+  @@index([userId])
+  @@index([isPublic])
+  @@index([isFeatured])
+}
+
+model ListBook {
+  id String @id @default(uuid())
+  listId String
+  bookId String
+  order Int
+  notes String?
+  addedAt DateTime @default(now())
+  
+  // Relações
+  list List @relation(fields: [listId], references: [id], onDelete: Cascade)
+  book Book @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  @@unique([listId, bookId])
+  
+  // Índices
+  @@index([listId])
+  @@index([bookId])
+  @@index([order])
+}
+
+model ListFollow{
+  id String @id @default(uuid())
+  userId String
+  listId String
+  createdAt DateTime @default(now())
+
+  // Relações
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  list List @relation(fields: [listId], references: [id], onDelete: Cascade)
+  @@unique([listId, userId])
+
+  // Índices
+  @@index([userId])
+  @@index([listId])
+
+}
+
+model Author {
+  id String @id @default(uuid())
+  name String
+  bio String?
+  photoUrl String?
+  birthDate DateTime?
+  deathDate DateTime?
+  status ContentStatus @default(DRAFT)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relações
+  books Book[] @relation("BookAuthors")
+  contributions Contribution[]
+  validations Validation[]
+
+  // Índices
+  @@index([name])
+  @@index([status])
+}
+
+
+model Genre {
+  id String @id @default(uuid())
+  name String @unique
+  description String?
+  createdAt DateTime @default(now())
+
+  // Relações
+  books Book[] @relation("BookGenres")
+
+  // Índices
+  @@index([name])
+}
+
+model Review {
+  id String @id @default(uuid())
+  bookId String
+  userId String
+  rating Int
+  title String
+  content String
+  containsSpoilers Boolean @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relações
+  book Book @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@unique([bookId, userId])
+
+  // Índices
+  @@index([bookId])
+  @@index([userId])
+  @@index([rating])
+}
+
+model Contribution {
+  id String @id @default(uuid())
+  userId String
+  entityType String
+  entityId String
+  action ContributionAction
+  data Json
+  status ContributionStatus @default(PENDING)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relações
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  book Book @relation(fields: [entityId], references: [id]) @ignore
+  author Author @relation(fields: [entityId], references: [id]) @ignore
+
+  // Índices
+  @@index([userId])
+  @@index([entityType, entityId])
+  @@index([status])
+}
+model Validation {
+  id String @id @default(uuid())
+  userId String
+  entityType String
+  entityId String
+  isValid Boolean
+  comment String?
+  createdAt DateTime @default(now())
+
+  // Relações
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  book Book @relation(fields: [entityId], references: [id]) @ignore
+  author Author @relation(fields: [entityId], references: [id]) @ignore
+  @@unique([userId, entityType, entityId])
+
+  // Índices
+  @@index([userId])
+  @@index([entityType, entityId]) 
+}
+
+
+// Enums
+
+enum UserRole {
+  USER
+  MODERATOR
+  ADMIN
+}
+
+enum ContentStatus {
   DRAFT
   PENDING_VALIDATION
   VALIDATED
   REJECTED
   ARCHIVED
+	@@map("BookStatus")
 }
 
-model Book {
-  id String @id @default(uuid())
-  title String
-  author String
-  isbn String? @unique
-  description String?
-  status BookStatus @default(DRAFT)
-
-  contributorUuid String
-  contributor User @relation(fields: [contributorUuid], references: [uuid])
-  validations BookValidation[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  deletedAt DateTime?
+enum ReadStatus {
+  WANT_TO_READ
+  READING
+  READ
+  DID_NOT_FINISH
 }
 
-model BookValidation {
-  bookId String
-  validatorUuid String
-  isValid Boolean
-  reason String?
+enum ContributionAction {
+  CREATE
+  UPDATE
+  NERGE
+  DELETE
+}
 
-  book Book @relation(fields: [bookId], references: [id])
-  validator User @relation(fields: [validatorUuid], references: [uuid])
+enum ContributionStatus {
+  PENDING
+  APPROED
+  REJECTED
+}
 
-  createdAt DateTime @default(now())
-  deletedAt DateTime?
+enum ReputationEventType {
+  BOOK_ADDED
+  BOOK_VALIDATED
+  REVIEW_POSTED
+  CONTRIBUTION_APPROVED
+  DAILY_LOGIN
+  PROFILE_COMPLETED
+}
 
-  @@id([bookId, validatorUuid])
+enum NotificationType {
+  SYSTEM
+  CONTRIBUTION_APPROVED
+  CONTRIBUTION_REJECTED
+  NEW_FOLLOWER
+  VALIDATION_RECEIVED
+  REPUTATION_MILESTONE
 }
