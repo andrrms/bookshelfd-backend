@@ -19,12 +19,17 @@ class UserService {
       throw new ConflictError('E-mail já cadastrado.');
     }
 
-    const hashedPassword = await bcrypt.hash(userData.password, 10);
+    const { email, username, password } = userData;
+
+    const salt = await bcrypt.genSalt(12);
+    const passwordHash = await bcrypt.hash(password, salt);
 
     const user = await prisma.user.create({
       data: {
-        ...userData,
-        password: hashedPassword,
+        email,
+        username,
+        passwordHash,
+        salt,
       },
     });
 
@@ -36,7 +41,7 @@ class UserService {
     return users.map((user) => userResponseSchema.parse(user));
   }
 
-  async getUserById(id: number) {
+  async getUserById(id: string) {
     const user = await prisma.user.findUnique({
       where: { id, deletedAt: null },
     });
@@ -48,23 +53,7 @@ class UserService {
     return userResponseSchema.parse(user);
   }
 
-  async getUserByUuid(uuid: string) {
-    const user = await prisma.user.findUnique({
-      where: { uuid, deletedAt: null },
-    });
-
-    if (!user) {
-      throw new NotFoundError('Usuário não encontrado.');
-    }
-
-    return userResponseSchema.parse(user);
-  }
-
-  async updateUser(id: number, userData: z.infer<typeof updateUserSchema>) {
-    if (userData.password) {
-      userData.password = await bcrypt.hash(userData.password, 10);
-    }
-
+  async updateUser(id: string, userData: z.infer<typeof updateUserSchema>) {
     try {
       const user = await prisma.user.update({
         where: { id },
@@ -83,7 +72,7 @@ class UserService {
     }
   }
 
-  async deleteUser(id: number) {
+  async deleteUser(id: string) {
     try {
       const user = await prisma.user.update({
         where: { id },

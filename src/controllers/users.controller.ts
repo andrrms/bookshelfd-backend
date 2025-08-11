@@ -20,7 +20,7 @@ class UserController {
 
     if (params.error) throw params.error;
 
-    const user = await userService.getUserByUuid(params.data.id);
+    const user = await userService.getUserById(params.data.id);
     return res.json(user);
   }
 

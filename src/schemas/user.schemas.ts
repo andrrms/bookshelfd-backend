@@ -1,65 +1,84 @@
+import { UserRole } from '@/database';
 import { z } from 'zod';
 
-export const userCoreSchema = z.object({
-  id: z.number().int(),
-  uuid: z.uuid(),
+export const userSchema = z.object({
+  id: z.uuid(),
+  email: z.email(),
   username: z.string(),
-  email: z.string(),
-  password: z
-    .string()
-    .min(6, 'Senha deve ter pelo menos 6 caracteres')
-    .optional(),
-  reputation: z.number().int(),
-  createdAt: z.coerce.date(),
-  updatedAt: z.coerce.date(),
-  deletedAt: z.coerce.date().nullable(),
+  firstName: z.string().nullable().optional(),
+  lastName: z.string().nullable().optional(),
+  bio: z.string().nullable().optional(),
+  avatarUrl: z.url().nullable().optional(),
+  passwordHash: z.string(),
+  salt: z.string(),
+  role: UserRole,
+  reputation: z.number().int().default(0),
+  emailVerified: z.boolean().default(false),
+  verificationToken: z.string().nullable().optional(),
+  resetPasswordToken: z.string().nullable().optional(),
+  resetPasswordExpires: z.date().nullable().optional(),
+  lastLogin: z.date().nullable().optional(),
+  createdAt: z.date().default(() => new Date()),
+  updatedAt: z.date(),
+  deletedAt: z.date().nullable().optional(),
 });
 
-export const createUserSchema = userCoreSchema
-  .omit({
-    id: true,
-    reputation: true,
-    createdAt: true,
-    updatedAt: true,
-    deletedAt: true,
+export const createUserSchema = z
+  .object({
+    email: z.email(),
+    username: z.string(),
+    password: z
+      .string({
+        error: 'Required',
+      })
+      .min(8, { message: 'min 8' }),
+    password_confirmation: z
+      .string({
+        error: 'Required',
+      })
+      .min(8, { message: 'min 8' }),
   })
-  .required({
-    username: true,
-    email: true,
-    password: true,
+  .refine((data) => data.password === data.password_confirmation, {
+    message: 'Passwords do not match',
+    path: ['password_confirmation'],
   });
 
-export const updateUserSchema = userCoreSchema
-  .omit({
-    id: true,
-    createdAt: true,
-    reputation: true,
-    deletedAt: true,
-  })
-  .partial()
-  .refine((data) => Object.keys(data).length > 0, {
-    message: 'Pelo menos um campo deve ser fornecido para atualização',
-  });
-
-export const userResponseSchema = userCoreSchema
-  .omit({
-    password: true,
-    deletedAt: true,
-  })
-  .required({
-    id: true,
-    username: true,
-    email: true,
-    reputation: true,
-    createdAt: true,
-    updatedAt: true,
-  });
-
-export const userTokenPayloadSchema = z.object({
-  uuid: z.uuid(),
+export const updateUserSchema = z.object({
+  email: z.email(),
   username: z.string(),
-  email: z.string(),
+  firstName: z.string().nullable().optional(),
+  lastName: z.string().nullable().optional(),
+  bio: z.string().nullable().optional(),
+  avatarUrl: z.url().nullable().optional(),
 });
 
-export type UserTokenPayload = z.infer<typeof userTokenPayloadSchema>;
+export const userResponseSchema = z.object({
+  id: z.uuid(),
+  email: z.email(),
+  username: z.string(),
+  firstName: z.string().nullable().optional(),
+  lastName: z.string().nullable().optional(),
+  bio: z.string().nullable().optional(),
+  avatarUrl: z.url().nullable().optional(),
+  role: UserRole,
+  reputation: z.number().int().default(0),
+  emailVerified: z.boolean().default(false),
+  lastLogin: z.date().nullable().optional(),
+});
+
+export const accessTokenPayloadSchema = z.object({
+  id: z.uuid(),
+  sessionId: z.uuid(),
+  role: UserRole,
+});
+
+export const refreshTokenPayloadSchema = z.object({
+  jti: z.uuid(),
+  sub: z.uuid(),
+  type: z.string().default('refresh'),
+});
+
+export type UserSchema = z.infer<typeof userSchema>;
+export type AccessTokenPayload = z.infer<typeof accessTokenPayloadSchema>;
+export type RefreshTokenPayload = z.infer<typeof refreshTokenPayloadSchema>;
 export type UserResponse = z.infer<typeof userResponseSchema>;
