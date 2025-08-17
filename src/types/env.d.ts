@@ -4,5 +4,8 @@ declare namespace NodeJS {
     PORT: string;
     DATABASE_URL: string;
     ACCESS_TOKEN_SECRET: string;
+    REFRESH_TOKEN_SECRET: string;
+    JWT_ACCESS_EXPIRATION: string;
+    JWT_REFRESH_EXPITATION: string;
   }
 }
