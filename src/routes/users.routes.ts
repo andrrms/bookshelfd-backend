@@ -1,15 +1,18 @@
-import { Router } from 'express';
 import userController from '@/controllers/users.controller';
-import authenticateToken from '@/middlewares/authenticateToken';
+import { Router } from 'express';
 
 const userRouter: Router = Router();
 
-userRouter.post('/register', userController.register);
-
-userRouter.use(authenticateToken);
 userRouter.get('/me', userController.findMe);
 userRouter.put('/me', userController.updateMe);
 userRouter.delete('/me', userController.softDeleteMe);
-userRouter.get('/:id', userController.findById);
+userRouter.get('/:username', userController.findByUsername);
+userRouter.get('/:username/bookshelf', userController.getUserBookshelf);
+//GET :username/lists
+//GET :username/reviews
+//POST follow/:username
+//DELETE follow/:username
+//GET :username/followers
+//GET :username/following
 
 export default userRouter;

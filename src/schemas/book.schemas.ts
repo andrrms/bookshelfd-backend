@@ -38,8 +38,8 @@ export const updateBookSchema = createBookSchema.partial();
 export type CreateBookInput = z.infer<typeof createBookSchema>;
 export type UpdateBookInput = z.infer<typeof updateBookSchema>;
 
-export const findUserByIdSchema = z.object({
-  id: z.uuid({
-    message: 'O ID deve ser um UUID válido.',
+export const findUserByUsernameSchema = z.object({
+  username: z.string({
+    message: 'O username deve ser uma string válida',
   }),
 });

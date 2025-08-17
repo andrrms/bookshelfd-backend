@@ -60,16 +60,15 @@ export const userResponseSchema = z.object({
   lastName: z.string().nullable().optional(),
   bio: z.string().nullable().optional(),
   avatarUrl: z.url().nullable().optional(),
-  role: UserRole,
+  role: z.enum(UserRole).default('USER'),
   reputation: z.number().int().default(0),
-  emailVerified: z.boolean().default(false),
   lastLogin: z.date().nullable().optional(),
 });
 
 export const accessTokenPayloadSchema = z.object({
   userId: z.uuid(),
   sessionId: z.uuid(),
-  role: UserRole,
+  role: z.enum(UserRole).default('USER'),
 });
 
 export type UserSchema = z.infer<typeof userSchema>;

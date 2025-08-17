@@ -1,6 +1,7 @@
 import { NotFoundError, UnauthorizedError } from '@/errors/custom-errors';
 
 import { NextFunction, Request, Response } from 'express';
+import { JsonWebTokenError, TokenExpiredError } from 'jsonwebtoken';
 import z from 'zod';
 
 export default function globalErrorHandler(
@@ -9,8 +10,6 @@ export default function globalErrorHandler(
   res: Response,
   next: NextFunction,
 ) {
-  console.error(err);
-
   if (err instanceof z.ZodError) {
     return res.status(400).json({
       status: 'error',
@@ -19,7 +18,11 @@ export default function globalErrorHandler(
     });
   }
 
-  if (err instanceof UnauthorizedError) {
+  if (
+    err instanceof UnauthorizedError ||
+    err instanceof TokenExpiredError ||
+    err instanceof JsonWebTokenError
+  ) {
     return res.status(401).json({
       status: 'error',
       message: err.message,

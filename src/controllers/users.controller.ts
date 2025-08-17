@@ -1,27 +1,30 @@
-import { findUserByIdSchema } from '@/schemas/book.schemas';
+import { findUserByUsernameSchema } from '@/schemas/book.schemas';
 import { createUserSchema, updateUserSchema } from '@/schemas/user.schemas';
 import userService from '@/services/users.service';
 import { Request, Response } from 'express';
 
 class UserController {
-  async register(req: Request, res: Response) {
-    const validatedData = createUserSchema.parse(req.body);
-    const newUser = await userService.createUser(validatedData);
-    return res.status(201).json(newUser);
-  }
-
   async findMe(req: Request, res: Response) {
     const { user } = req;
     return res.json(user);
   }
 
-  async findById(req: Request, res: Response) {
-    const params = findUserByIdSchema.safeParse(req.params);
+  async findByUsername(req: Request, res: Response) {
+    const params = findUserByUsernameSchema.safeParse(req.params);
 
     if (params.error) throw params.error;
 
-    const user = await userService.getUserById(params.data.id);
+    const user = await userService.getUserByUsername(params.data.username);
     return res.json(user);
+  }
+
+  async getUserBookshelf(req: Request, res: Response) {
+    const params = findUserByUsernameSchema.safeParse(req.params);
+
+    if (params.error) throw params.error;
+
+    const bookshelf = await userService.getUserBookshelf(params.data.username);
+    return res.json(bookshelf);
   }
 
   async updateMe(req: Request, res: Response) {

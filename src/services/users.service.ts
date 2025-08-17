@@ -1,5 +1,5 @@
 import { PrismaErrors } from '@/constants/prisma-errors';
-import prisma, { Prisma } from '@/database';
+import prisma, { Book, BookshelfEntry, Prisma } from '@/database';
 import { ConflictError, NotFoundError } from '@/errors/custom-errors';
 import {
   createUserSchema,
@@ -43,7 +43,10 @@ class UserService {
 
   async getUserById(id: string) {
     const user = await prisma.user.findUnique({
-      where: { id, deletedAt: null },
+      where: {
+        id,
+        deletedAt: null,
+      },
     });
 
     if (!user) {
@@ -51,6 +54,40 @@ class UserService {
     }
 
     return userResponseSchema.parse(user);
+  }
+
+  async getUserByUsername(username: string) {
+    const user = await prisma.user.findUnique({
+      where: {
+        username,
+        deletedAt: null,
+      },
+    });
+
+    if (!user) {
+      throw new NotFoundError('Usuário não encontrado.');
+    }
+
+    return userResponseSchema.parse(user);
+  }
+
+  async getUserBookshelf(username: string): Promise<BookshelfEntry[]> {
+    const user = await prisma.user.findUnique({
+      where: { username },
+      include: {
+        bookshelf: {
+          include: {
+            book: true,
+          },
+        },
+      },
+    });
+
+    if (!user) {
+      throw new NotFoundError('Usuário não encontrado.');
+    }
+
+    return user.bookshelf;
   }
 
   async updateUser(id: string, userData: z.infer<typeof updateUserSchema>) {
